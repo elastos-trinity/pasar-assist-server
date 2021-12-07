@@ -61,7 +61,7 @@ module.exports = {
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         pasarOrder.sellerDid = await response.json();
 
-                        await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
+                        await pasarDBService.replaceDid({address: result.sellerAddr, didStr: pasarOrder.sellerDid.did, did: pasarOrder.sellerDid});
                     }
                 }
                 let res = await pasarDBService.updateOrInsert(pasarOrder);
@@ -88,14 +88,10 @@ module.exports = {
                 let tokenCID = result.tokenUri.split(":")[2];
                 let response = await fetch(config.ipfsNodeUrl + tokenCID);
                 let data = await response.json();
-                token.kind = data.kind;
+                token.tokenJsonVersion = data.version;
                 token.type = data.type;
-                token.asset = data.image;
                 token.name = data.name;
                 token.description = data.description;
-                token.thumbnail = data.thumbnail;
-                token.size = data.size;
-                token.adult = data.adult ? data.adult : false;
 
                 if(blockNumber > config.upgradeBlock) {
                     let extraInfo = await stickerContract.methods.tokenExtraInfo(tokenId).call();
@@ -107,10 +103,23 @@ module.exports = {
                         token.did = await response.json();
 
                         logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                        await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
+                        await pasarDBService.replaceDid({address: result.royaltyOwner,didStr: token.did.did, did: token.did});
                     }
                 }
-                await stickerDBService.replaceToken(token);
+
+                if(token.type === 'feeds-channel') {
+                    token.tippingAddress = data.tippingAddress;
+                    token.entry = data.entry;
+                    token.avatar = data.avatar;
+                    await stickerDBService.replaceGalleriaToken(token);
+                } else {
+                    token.thumbnail = data.thumbnail;
+                    token.asset = data.image;
+                    token.kind = data.kind;
+                    token.size = data.size;
+                    token.adult = data.adult ? data.adult : false;
+                    await stickerDBService.replaceToken(token);
+                }
             } catch (e) {
                 logger.info(`[TokenInfo] Sync error at ${blockNumber} ${tokenId}`);
                 logger.info(e);
