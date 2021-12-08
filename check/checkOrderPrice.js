@@ -16,25 +16,25 @@ async function checkOrderPrice() {
             { $replaceRoot: { newRoot: "$doc"}},
         ]).toArray();
 
-        let a2 = new Map();
+        let orderEvents = new Map();
         result2.forEach(item => {
             let price = item.data.newPrice
-            a2.set(item.orderId, price);
+            orderEvents.set(item.orderId, price);
         })
 
         let i = 0;
         result.forEach(item => {
-            let price = a2.get(item.orderId);
+            let price = orderEvents.get(item.orderId);
             if(price === undefined) {
                 return
             }
             if(item.price !== price) {
-                console.log(`${item.orderId}  pasar_order price: ${item.price} ==> pasar_event_order price: ${price}`)
+                console.log(`${item.orderId}:  pasar_order price: ${item.price} <==> pasar_event_order price: ${price}`)
                 i++
             }
         })
 
-        console.log(`there are ${i} orders price incorrect`)
+        return i;
     } catch (err) {
         console.log(err);
     } finally {

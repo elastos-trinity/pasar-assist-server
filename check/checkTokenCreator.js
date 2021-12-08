@@ -10,28 +10,31 @@ async function checkTokenHolder() {
         const collection = mongoClient.db(config.dbName).collection('pasar_token');
         let result = await collection.find({}).sort({blockNumber: -1}).project({"_id": 0, tokenId: 1, royaltyOwner: 1}).toArray();
 
-        let a1 = new Map();
+        let tokens = new Map();
         result.forEach(item => {
-            a1.set(item.tokenId, item.royaltyOwner);
+            tokens.set(item.tokenId, item.royaltyOwner);
         })
 
         const collection2 = mongoClient.db(config.dbName).collection('pasar_token_event');
         let result2 = await collection2.find({ $or: [{from: burnAddress}, {to: burnAddress}]})
             .project({"_id": 0,tokenId:1, from: 1, to: 1, blockNumber: 1}).sort({blockNumber: 1}).toArray();
 
-        let a2 = new Map();
+        let tokenEvents = new Map();
         result2.forEach(item => {
-            if(!a2.has(item.tokenId)) {
-                a2.set(item.tokenId, item.to);
+            if(!tokenEvents.has(item.tokenId)) {
+                tokenEvents.set(item.tokenId, item.to);
             }
         })
 
-        console.log(`Pasar token: ${a1.size}   Pasar token event: ${a2.size}`);
-        a2.forEach((value, key) => {
-            if(value !== a1.get(key)) {
-                console.log(`${key}:  ${value} <==> ${a1.get(key)}`)
+        console.log(`Pasar token: ${tokens.size}   Pasar token event: ${tokenEvents.size}`);
+        let i = 0;
+        tokenEvents.forEach((value, key) => {
+            if(value !== tokens.get(key)) {
+                console.log(`${key}:  ${tokens.get(key)} <==> ${value}`)
+                i++;
             }
         })
+        return i;
     } catch (err) {
         console.log(err);
     } finally {

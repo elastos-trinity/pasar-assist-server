@@ -16,21 +16,21 @@ async function checkOrderState() {
             { $replaceRoot: { newRoot: "$doc"}},
         ]).toArray();
 
-        let a2 = new Map();
+        let orderEvents = new Map();
         result2.forEach(item => {
             let state = item.event === "OrderForSale" ? "1" : item.event === "OrderFilled" ? "2" : item.event === "OrderCanceled" ? "3" : "0"
-            a2.set(item.orderId, state);
+            orderEvents.set(item.orderId, state);
         })
 
         let i = 0;
         result.forEach(item => {
-            if(item.orderState !== a2.get(item.orderId)) {
-                console.log(`${item.orderId}  pasar_order state: ${item.orderState} ==> pasar_event_order state: ${a2.get(item.orderId)}`)
+            if(item.orderState !== orderEvents.get(item.orderId)) {
+                console.log(`${item.orderId}:  pasar_order state: ${item.orderState} <==> pasar_event_order state: ${orderEvents.get(item.orderId)}`)
                 i++
             }
         })
 
-        console.log(`there are ${i} orders state incorrect`)
+        return i;
     } catch (err) {
         console.log(err);
     } finally {
