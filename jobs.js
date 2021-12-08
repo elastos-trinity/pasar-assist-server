@@ -217,6 +217,26 @@ module.exports = {
             })
         });
 
+        let orderPlatformFeeId = schedule.scheduleJob(new Date(now + 4 * 60 * 1000), async () => {
+            let lastHeight = await pasarDBService.getLastOrderPlatformFeeSyncHeight();
+
+            logger.info(`[OrderPlatformFee] Sync start from height: ${lastHeight}`);
+
+            pasarContractWs.events.OrderPlatformFee({
+                fromBlock: lastHeight + 1
+            }).on("error", function (error) {
+                logger.info(error);
+                logger.info("[OrderPlatformFee] Sync Ending ...");
+            }).on("data", async function (event) {
+                let orderInfo = event.returnValues;
+                let orderEventDetail = {orderId: orderInfo._orderId, platformAddr: orderInfo._platformAddress,
+                    platformFee: orderInfo._platformFee};
+
+                logger.info(`[OrderPlatformFee] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
+                await pasarDBService.insertOrderPlatformFeeEvent(orderEventDetail);
+            })
+        });
+
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             let lastHeight = await stickerDBService.getLastStickerSyncHeight();
             isGetTokenInfoJobRun = true;

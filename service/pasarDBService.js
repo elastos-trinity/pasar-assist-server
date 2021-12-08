@@ -21,6 +21,25 @@ module.exports = {
         }
     },
 
+    getLastOrderPlatformFeeSyncHeight: async function () {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_order_platform_fee');
+            let doc = await collection.findOne({}, {sort:{blockNumber:-1}})
+            if(doc) {
+                return doc.blockNumber
+            } else {
+                return config.upgradeBlock - 1;
+            }
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
+        }
+    },
+
     updateOrInsert: async function (pasarOrder) {
         let {orderId, ...rest} = pasarOrder;
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
@@ -61,6 +80,20 @@ module.exports = {
             throw new Error();
         } finally {
            await mongoClient.close();
+        }
+    },
+
+    insertOrderPlatformFeeEvent: async function (orderEventDetail) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_order_platform_fee');
+            await collection.insertOne(orderEventDetail);
+        } catch (err) {
+            logger.error(err);
+            throw new Error();
+        } finally {
+            await mongoClient.close();
         }
     },
 
