@@ -36,7 +36,7 @@ async function removeDuplicateDBItem() {
 
         return await Promise.all(promises);
     } catch (err) {
-        logger.error(err);
+        console.log(err);
     } finally {
         await mongoClient.close();
     }
