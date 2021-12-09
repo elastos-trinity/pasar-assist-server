@@ -215,4 +215,21 @@ module.exports = {
             await client.close();
         }
     },
+
+    queryOrderPriceChangeHistory: async function(tokenId) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            let collection = client.db(config.dbName).collection('pasar_order');
+            let result = await collection.findOne({tokenId}).projection({"_id": 0}).toArray();
+            let collection2 = client.db(config.dbName).collection('pasar_order_event');
+            result.priceHistory = await collection2.find({tokenId}).projection({"_id": 0}).sort({blockNumber: -1}).toArray();
+            return {code: 200, message: 'success', data: result};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
 }

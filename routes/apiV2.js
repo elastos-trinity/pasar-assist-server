@@ -72,7 +72,7 @@ router.get('/orders/sale/all', function (res, req) {
 })
 
 router.get('/orders/priceChanged/tokenId/:tokenId', function (res, req) {
-
+    return apiV2DBService.queryOrderPriceChangeHistory(req.params.tokenId)
 })
 
 router.get('/orders/priceChanged/seller/:seller', function (res, req) {
