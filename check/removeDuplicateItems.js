@@ -34,7 +34,7 @@ async function removeDuplicateDBItem() {
             }
         })
 
-        return await Promise.all(promises);
+        return Promise.all(promises);
     } catch (err) {
         console.log(err);
     } finally {

@@ -229,8 +229,8 @@ module.exports = {
                 logger.info("[OrderPlatformFee] Sync Ending ...");
             }).on("data", async function (event) {
                 let orderInfo = event.returnValues;
-                let orderEventDetail = {orderId: orderInfo._orderId, platformAddr: orderInfo._platformAddress,
-                    platformFee: orderInfo._platformFee};
+                let orderEventDetail = {orderId: orderInfo._orderId, blockNumber: event.blockNumber,
+                    platformAddr: orderInfo._platformAddress, platformFee: orderInfo._platformFee};
 
                 logger.info(`[OrderPlatformFee] orderEventDetail: ${JSON.stringify(orderEventDetail)}`)
                 await pasarDBService.insertOrderPlatformFeeEvent(orderEventDetail);
