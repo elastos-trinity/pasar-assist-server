@@ -80,5 +80,20 @@ router.get('/orders/priceChanged/seller/:seller', function (res, req) {
 })
 
 
+router.get('/giveaways/tokenId/:tokenId', function (res, req) {
+    return apiV2DBService.queryGatewaysToken('tokenId', req.params.tokenId);
+})
+
+router.get('/giveaways/sender/:sender', function (res, req) {
+    return apiV2DBService.queryGatewaysToken('from', req.params.sender);
+})
+
+router.get('/giveaways/recipient/:recipient', function (res, req) {
+    return apiV2DBService.queryGatewaysToken('to', req.params.recipient);
+})
+
+router.get('/giveaways/royaltyowner/:royaltyowner', function (res, req) {
+    return apiV2DBService.queryGatewaysTokenByRoyaltyOwner(req.params.royaltyowner);
+})
 
 module.exports = router;

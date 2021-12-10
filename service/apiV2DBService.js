@@ -232,4 +232,49 @@ module.exports = {
             await client.close();
         }
     },
+
+    queryGatewaysToken: async function(types, value) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            let collection = client.db(config.dbName).collection('pasar_token_event');
+
+            let result = await collection.aggregate([
+                {$match: {[types]: value, memo: {$exists: true, "$ne": ""}}},
+                {$lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"}},
+                {$unwind: "$token"},
+                {$project: {from: 1, ...this.projectionToken}}
+            ]).toArray();
+
+            return {code: 200, message: 'success', data: result};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
+
+    queryGatewaysTokenByRoyaltyOwner: async function(royaltyOwner) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            let collection = client.db(config.dbName).collection('pasar_token_event');
+
+            let result = await collection.aggregate([
+                {$match: {memo: {$exists: true, "$ne": ""}}},
+                {$lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"}},
+                {$unwind: "$token"},
+                {$match: {"token.royaltyOwner": royaltyOwner}},
+                {$project: {from: 1, ...this.projectionToken}}
+            ]).toArray();
+
+            return {code: 200, message: 'success', data: result};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
 }
