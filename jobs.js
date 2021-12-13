@@ -67,7 +67,7 @@ module.exports = {
                 let res = await pasarDBService.updateOrInsert(pasarOrder);
                 if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-                    console.log(`${eventType}]  update or insert order info error : ${JSON.stringify(pasarOrder)}`)
+                    console.log(`update or insert order info error : ${JSON.stringify(pasarOrder)}`)
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
                 }
             } catch(error) {
