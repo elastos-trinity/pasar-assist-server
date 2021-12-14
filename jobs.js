@@ -17,6 +17,18 @@ module.exports = {
         const burnAddress = '0x0000000000000000000000000000000000000000';
 
         let web3WsProvider = new Web3.providers.WebsocketProvider(config.escWsUrl, {
+            //timeout: 30000, // ms
+            // Useful for credentialed urls, e.g: ws://username:password@localhost:8546
+            //headers: {
+            //    authorization: 'Basic username:password'
+            //},
+            clientConfig: {
+                // Useful if requests are large
+                maxReceivedFrameSize: 100000000,   // bytes - default: 1MiB
+                maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
+                keepalive: true, // Useful to keep a connection alive
+                keepaliveInterval: 60000 // ms
+            },
             reconnect: {
                 auto: true,
                 delay: 5000,
