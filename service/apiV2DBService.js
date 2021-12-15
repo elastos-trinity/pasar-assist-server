@@ -109,6 +109,26 @@ module.exports = {
         }
     },
 
+    queryDidsByAddress: async function(address) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            let collection = client.db(config.dbName).collection('pasar_address_did');
+            let did = await collection.find({address}).project({"_id": 0}).toArray();
+            let dids = []
+            did.forEach(item => {
+                dids.push(item.did);
+            })
+
+            return {code: 200, message: 'success', data: {address, dids}};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
+    },
+
     /**
      * @param orderState 1 => orderForSale  2 => orderFilled  3 => orderCanceled
      * @param types tokenId  buyer

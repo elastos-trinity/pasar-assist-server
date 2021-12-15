@@ -27,6 +27,10 @@ router.get('/creators/all', function (req, res) {
     apiV2DBService.queryAllCreators().then(result => {res.json(result)})
 })
 
+router.get('/creator/:address', function (req, res) {
+    apiV2DBService.queryDidsByAddress(req.params.address).then(result => {res.json(result)})
+})
+
 router.get('/orders/filled/tokenId/:tokenId', function (req, res) {
     apiV2DBService.queryOrders('2', 'tokenId', req.params.tokenId).then(result => {res.json(result)})
 })
