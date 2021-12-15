@@ -122,8 +122,8 @@ module.exports = {
             let collection = client.db(config.dbName).collection('pasar_order');
 
             let query = {orderState, [types]: keyword}
-
-            let result = await collection.find(query).projection({"_id": 0}).toArray();
+            logger.info(`------------- ${JSON.stringify(query)}`)
+            let result = await collection.find(query).project({"_id": 0}).toArray();
 
             return {code: 200, message: 'success', data: result};
         } catch (err) {
@@ -145,8 +145,6 @@ module.exports = {
         try {
             await client.connect();
             let collection = client.db(config.dbName).collection('pasar_token_event');
-
-            let query = {orderState, [types]: keyword}
 
             let result = await collection.aggregate([
                 { $sort: {tokenId: 1, blockNumber: -1}},
@@ -205,7 +203,7 @@ module.exports = {
 
             let query = orderState !== undefined ? {orderState} : {}
 
-            let result = await collection.find(query).projection({"_id": 0}).toArray();
+            let result = await collection.find(query).project({"_id": 0}).toArray();
 
             return {code: 200, message: 'success', data: result};
         } catch (err) {
@@ -221,9 +219,9 @@ module.exports = {
         try {
             await client.connect();
             let collection = client.db(config.dbName).collection('pasar_order');
-            let result = await collection.findOne({tokenId}).projection({"_id": 0}).toArray();
+            let result = (await collection.find({tokenId}).project({"_id": 0}).toArray())[0];
             let collection2 = client.db(config.dbName).collection('pasar_order_event');
-            result.priceHistory = await collection2.find({tokenId}).projection({"_id": 0}).sort({blockNumber: -1}).toArray();
+            result.priceHistory = await collection2.find({orderId: result.orderId, event: 'OrderPriceChanged'}).project({"_id": 0}).sort({blockNumber: -1}).toArray();
             return {code: 200, message: 'success', data: result};
         } catch (err) {
             logger.error(err);
@@ -233,7 +231,7 @@ module.exports = {
         }
     },
 
-    queryGatewaysToken: async function(types, value) {
+    queryGiveawaysToken: async function(types, value) {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await client.connect();
@@ -255,7 +253,7 @@ module.exports = {
         }
     },
 
-    queryGatewaysTokenByRoyaltyOwner: async function(royaltyOwner) {
+    queryGiveawaysTokenByRoyaltyOwner: async function(royaltyOwner) {
         let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await client.connect();
