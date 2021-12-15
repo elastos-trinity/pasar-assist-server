@@ -261,7 +261,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                                 token.did = await response.json();
 
                                 console.log(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                                await pasarDBService.replaceDid({address: result.royaltyOwner,didStr: token.did.did, did: token.did});
+                                await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                             }
                         }
 
