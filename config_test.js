@@ -20,5 +20,7 @@ module.exports = {
     ipfsNodeUrl: 'https://ipfs-test.trinity-feeds.app/ipfs/',
 
     serviceName: 'default',
-    upgradeBlock: 9090468
+    upgradeBlock: 9090468,
+
+    cmcApiKeys: []
 }
