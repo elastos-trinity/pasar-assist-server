@@ -20,7 +20,7 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_cmc_price');
-            return await collection.findOne({}).sort({timestamp: -1}).project({"_id": 0});
+            return await collection.findOne({},{sort:{timestamp: -1}});
         } catch (err) {
             logger.error(err);
         } finally {
