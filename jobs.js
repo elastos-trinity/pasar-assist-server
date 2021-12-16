@@ -2,6 +2,7 @@ const schedule = require('node-schedule');
 let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
 let stickerDBService = require('./service/stickerDBService');
+let indexDBService = require('./service/indexDBService');
 let config = require('./config');
 let pasarContractABI = require('./pasarABI');
 let stickerContractABI = require('./stickerABI');
@@ -420,12 +421,12 @@ module.exports = {
          */
         let coins = {"BTC": 1, "BNB": 1839, "HT": 2502, "AVAX": 5805, "ETH": 1027, "FTM": 3513, "MATIC": 3890};
         let coins2 = {"FSN": 2530, "ELA": 2492, "TELOS": 3482}
-        if(config.cmcApiKeys?.length > 0) {
+        if(config.cmcApiKeys.length > 0) {
             schedule.scheduleJob('*/2 * * * *', async () => {
                 let x = Math.floor(Math.random() * config.cmcApiKeys.length);
                 let headers = {'Content-Type': 'application/json', 'X-CMC_PRO_API_KEY': config.cmcApiKeys[x]}
                 let res = await fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100', {method: 'get', headers})
-                let result = res.json();
+                let result = await res.json();
 
                 let record = {timestamp: Date.parse(result.status.timestamp)}
                 result.data.forEach(item => {
@@ -436,7 +437,7 @@ module.exports = {
 
                 for(let i in coins2) {
                     let resOther = await fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=1&convert_id=${coins2[i]}`, {method: 'get', headers})
-                    let resultOther = resOther.json();
+                    let resultOther = await resOther.json();
 
                     if(resultOther.data[0].id === 1) {
                         let priceAtBTC = resultOther.data[0].quote[coins2[i]].price;
@@ -447,6 +448,7 @@ module.exports = {
                 }
 
                 logger.info(`[Get CMC PRICE] Price: ${JSON.stringify(record)}`);
+                await indexDBService.insertCoinsPrice(record);
             })
         }
     }
