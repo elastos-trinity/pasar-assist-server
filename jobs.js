@@ -449,6 +449,7 @@ module.exports = {
 
                 logger.info(`[Get CMC PRICE] Price: ${JSON.stringify(record)}`);
                 await indexDBService.insertCoinsPrice(record);
+                await indexDBService.removeOldPriceRecords(record.timestamp - 30 * 24 * 60 * 60 * 1000)
             })
         }
     }
