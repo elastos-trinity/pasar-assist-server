@@ -4,8 +4,8 @@ let pasarDBService = require('./service/pasarDBService');
 let stickerDBService = require('./service/stickerDBService');
 let indexDBService = require('./service/indexDBService');
 let config = require('./config');
-let pasarContractABI = require('./pasarABI');
-let stickerContractABI = require('./stickerABI');
+let pasarContractABI = require('./contractABI/pasarABI');
+let stickerContractABI = require('./contractABI/stickerABI');
 let sendMail = require('./send_mail');
 const BigNumber = require("bignumber.js");
 

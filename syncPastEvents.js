@@ -3,8 +3,8 @@ let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
 let stickerDBService = require('./service/stickerDBService');
 let config = require('./config');
-let pasarContractABI = require('./pasarABI');
-let stickerContractABI = require('./stickerABI');
+let pasarContractABI = require('./contractABI/pasarABI');
+let stickerContractABI = require('./contractABI/stickerABI');
 const BigNumber = require("bignumber.js");
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));

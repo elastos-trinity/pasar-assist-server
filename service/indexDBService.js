@@ -1,5 +1,7 @@
 let MongoClient = require('mongodb').MongoClient;
 let config = require('../config');
+const Web3 = require("web3");
+const diaContractABI = require('../contractABI/diaTokenABI');
 
 module.exports = {
     insertCoinsPrice: async function (record) {
@@ -40,4 +42,22 @@ module.exports = {
             await mongoClient.close();
         }
     },
+
+    diaBalances: async function(addresses) {
+        let web3 = new Web3(config.escRpcUrl);
+        let diaContract = new web3.eth.Contract(diaContractABI, '0x2C8010Ae4121212F836032973919E8AeC9AEaEE5');
+
+        let promises = [];
+        addresses.forEach(address => {
+            promises.push(diaContract.methods.balanceOf(address).call());
+        })
+
+        let balances = await Promise.all(promises);
+        let result = {};
+        addresses.forEach((address, index) => {
+            result[address] = balances[index];
+        })
+
+        return result;
+    }
 }
