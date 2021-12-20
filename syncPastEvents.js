@@ -218,6 +218,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         }).then(events => {
             events.forEach(async event => {
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
 
@@ -229,7 +231,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let value = event.returnValues._value;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value};
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
@@ -325,9 +327,11 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let value = event.returnValues._value;
                 let memo = event.returnValues._memo ? event.returnValues._memo : "";
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo};
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })

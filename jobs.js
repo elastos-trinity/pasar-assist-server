@@ -323,6 +323,8 @@ module.exports = {
                 isGetTokenInfoJobRun = false
             }).on("data", async function (event) {
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
 
@@ -335,7 +337,7 @@ module.exports = {
                 let value = event.returnValues._value;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
                 logger.info(`[TokenInfo] tokenEvent: ${JSON.stringify(transferEvent)}`)
                 await stickerDBService.replaceEvent(transferEvent);
 
@@ -367,9 +369,11 @@ module.exports = {
                 let value = event.returnValues._value;
                 let memo = event.returnValues._memo ? event.returnValues._memo : "";
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
+                let transferEvent = {tokenId, blockNumber, timestamp, txHash, txIndex, from, to, value, memo}
                 logger.info(`[TokenInfoWithMemo] transferToken: ${JSON.stringify(transferEvent)}`)
                 await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
