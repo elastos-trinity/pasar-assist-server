@@ -43,7 +43,7 @@ module.exports = {
         }
     },
 
-    diaBalances: async function(addresses) {
+    diaBalance: async function(addresses) {
         let web3 = new Web3(config.escRpcUrl);
         let diaContract = new web3.eth.Contract(diaContractABI, '0x2C8010Ae4121212F836032973919E8AeC9AEaEE5');
 

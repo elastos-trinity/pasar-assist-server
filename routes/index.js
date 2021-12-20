@@ -34,8 +34,8 @@ router.get('/price', function (req, res) {
     dbService.getLatestPrice().then(result => {res.json(result)});
 })
 
-router.post('/diaBalances', function (req, res) {
-    dbService.diaBalances(req.body).then(result => {res.json({code: 200, message: 'success', data: result})});
+router.post('/diaBalance', function (req, res) {
+    dbService.diaBalance(req.body).then(result => {res.json({code: 200, message: 'success', data: result})});
 })
 
 
