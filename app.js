@@ -4,6 +4,7 @@ let bodyParser = require('body-parser');
 let indexRouter = require('./routes/index');
 let pasarApi = require('./routes/pasarApi');
 let stickerApi = require('./routes/stickerApi');
+let galleriaApi = require('./routes/galleriaApi');
 let jobs = require('./jobs');
 let log4js = require('log4js');
 
@@ -30,6 +31,7 @@ app.use(cookieParser());
 app.use('/feeds/api/v1', indexRouter);
 app.use('/pasar/api/v1', pasarApi);
 app.use('/sticker/api/v1', stickerApi);
+app.use('/galleria/api/v1', galleriaApi);
 
 jobs.run()
 

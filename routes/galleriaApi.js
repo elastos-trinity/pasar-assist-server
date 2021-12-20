@@ -3,7 +3,7 @@ let router = express.Router();
 let galleriaDBService = require('../service/galleriaDBService');
 
 
-router.post('/listPanels', function (req, res) {
+router.get('/listPanels', function (req, res) {
     let pageNumStr = req.query.pageNum;
     let pageSizeStr = req.query.pageSize;
 
