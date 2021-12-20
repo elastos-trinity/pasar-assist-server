@@ -39,7 +39,15 @@ module.exports = {
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_panel_event');
-            return await collection.aggregate([
+
+            let total = await collection.aggregate([
+                { $group: {_id: "$panelId", doc: {$first: "$$ROOT"}}},
+                { $replaceRoot: { newRoot: "$doc"}},
+                { $match: {event: 'PanelCreated'}},
+                { $count: 'count'}
+            ]).toArray();
+
+            let result = await collection.aggregate([
                 { $group: {_id: "$panelId", doc: {$first: "$$ROOT"}}},
                 { $replaceRoot: { newRoot: "$doc"}},
                 { $lookup: {from: "pasar_token_galleria", localField: "tokenId", foreignField: "tokenId", as: "token"} },
@@ -54,6 +62,7 @@ module.exports = {
                 { $skip: (pageNum - 1) * pageSize },
                 { $limit: pageSize }
             ]).toArray();
+            return {code: 200, message: 'success', data: {total: total[0].count, result}};
         } catch (err) {
             logger.error(err);
         } finally {
