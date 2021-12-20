@@ -56,7 +56,6 @@ router.get('/query', function(req, res) {
     let creator = req.query.creator;
     let typesStr = req.query.types;
 
-    let error = 0;
     let types = undefined;
     if(typesStr !== undefined) {
         if(typeof typesStr !== "object") {
@@ -64,18 +63,15 @@ router.get('/query', function(req, res) {
         } else {
             types = typesStr;
         }
-        const typesDef = ['image', 'avatar', 'feeds-channel'];
-        types.forEach(item => {
-            logger.info(item)
-            if(!typesDef.includes(item)) {
-                res.json({code: 400, message: 'bad request'});
-                error = 1;
-                return false;
+        if(types[0] === 'image' || types[0] === 'avatar') {
+            if(types[1] === 'feeds-channel' || types.length > 2) {
+                res.json({code: 400, message: 'bad request'})
             }
-        })
-    }
-    if(error === 1) {
-        return;
+        } else {
+            if(types[0] === 'feeds-channel' && types.length > 1) {
+                res.json({code: 400, message: 'bad request'})
+            }
+        }
     }
 
     if(!owner && !creator) {
