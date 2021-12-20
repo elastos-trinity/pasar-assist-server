@@ -27,13 +27,35 @@ module.exports = {
             await client.connect();
             const collection = client.db(config.dbName).collection('pasar_token');
             let total = await collection.find().count();
-            let result = await collection.find().sort({createTime: -1}).project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
+            let result = await collection.find().sort({createTime: -1})
+                .project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
             logger.error(err);
             return {code: 500, message: 'server error'};
         } finally {
             await client.close();
+        }
+    },
+
+    listTransactions: async function(pageNum, pageSize) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+
+            let match = {
+                from: {$ne: '0x0000000000000000000000000000000000000000'},
+                to: {$nin: ['0x0000000000000000000000000000000000000000', config.pasarContract]},
+            }
+            let total = collection.find(match).count()
+            let result = await collection.find(match).sort({blockNumber: -1})
+                .project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
+            return {code: 200, message: 'success', data: {total, result}};
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
         }
     },
 

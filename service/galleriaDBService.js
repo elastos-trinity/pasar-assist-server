@@ -48,6 +48,7 @@ module.exports = {
             ]).toArray();
 
             let result = await collection.aggregate([
+                { $sort: {panelId: -1, blockNumber: -1}},
                 { $group: {_id: "$panelId", doc: {$first: "$$ROOT"}}},
                 { $replaceRoot: { newRoot: "$doc"}},
                 { $lookup: {from: "pasar_token_galleria", localField: "tokenId", foreignField: "tokenId", as: "token"} },
