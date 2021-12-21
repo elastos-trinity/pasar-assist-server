@@ -253,62 +253,64 @@ module.exports = {
             })
         });
 
-        let panelCreatedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
-            let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelCreated');
-            logger.info(`[GalleriaPanelCreated] Sync Starting ... from block ${lastHeight + 1}`)
+        let panelCreatedSyncJobId, panelRemovedSyncJobId;
+        if(config.galleriaContract !== '' && config.galleriaContractDeploy !== 0) {
+            panelCreatedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+                let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelCreated');
+                logger.info(`[GalleriaPanelCreated] Sync Starting ... from block ${lastHeight + 1}`)
 
-            galleriaContractWs.events.PanelCreated({
-                fromBlock: lastHeight + 1
-            }).on("error", function (error) {
-                logger.info(error);
-                logger.info("[GalleriaPanelCreated] Sync Ending ...");
-                isGetTokenInfoWithMemoJobRun = false
-            }).on("data", async function (event) {
-                let user = event.returnValues._user;
-                let panelId = event.returnValues._panelId;
-                let tokenId = event.returnValues._tokenId;
-                let amount = event.returnValues._amount;
-                let fee = event.returnValues._fee;
-                let didUri = event.returnValues.didUri;
-                let blockNumber = event.blockNumber;
-                let txHash = event.transactionHash;
-                let txIndex = event.transactionIndex;
+                galleriaContractWs.events.PanelCreated({
+                    fromBlock: lastHeight + 1
+                }).on("error", function (error) {
+                    logger.info(error);
+                    logger.info("[GalleriaPanelCreated] Sync Ending ...");
+                    isGetTokenInfoWithMemoJobRun = false
+                }).on("data", async function (event) {
+                    let user = event.returnValues._user;
+                    let panelId = event.returnValues._panelId;
+                    let tokenId = event.returnValues._tokenId;
+                    let amount = event.returnValues._amount;
+                    let fee = event.returnValues._fee;
+                    let didUri = event.returnValues.didUri;
+                    let blockNumber = event.blockNumber;
+                    let txHash = event.transactionHash;
+                    let txIndex = event.transactionIndex;
 
-                let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex, tokenId, amount, fee, didUri}
+                    let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex, tokenId, amount, fee, didUri}
 
-                let creatorCID = didUri.split(":")[2];
-                let response = await fetch(config.ipfsNodeUrl + creatorCID);
-                panelEvent.did = await response.json();
+                    let creatorCID = didUri.split(":")[2];
+                    let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                    panelEvent.did = await response.json();
 
-                logger.info(`[GalleriaPanelCreated] Panel Detail: ${JSON.stringify(panelEvent)}`)
-                await galleriaDbService.addPanelEvent(panelEvent);
-            })
-        });
+                    logger.info(`[GalleriaPanelCreated] Panel Detail: ${JSON.stringify(panelEvent)}`)
+                    await galleriaDbService.addPanelEvent(panelEvent);
+                })
+            });
 
-        let panelRemovedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
-            let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelRemoved');
-            logger.info(`[GalleriaPanelRemoved] Sync Starting ... from block ${lastHeight + 1}`)
+            panelRemovedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+                let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelRemoved');
+                logger.info(`[GalleriaPanelRemoved] Sync Starting ... from block ${lastHeight + 1}`)
 
-            galleriaContractWs.events.PanelRemoved({
-                fromBlock: lastHeight + 1
-            }).on("error", function (error) {
-                logger.info(error);
-                logger.info("[GalleriaPanelRemoved] Sync Ending ...");
-                isGetTokenInfoWithMemoJobRun = false
-            }).on("data", async function (event) {
-                let user = event.returnValues._user;
-                let panelId = event.returnValues._panelId;
-                let blockNumber = event.blockNumber;
-                let txHash = event.transactionHash;
-                let txIndex = event.transactionIndex;
+                galleriaContractWs.events.PanelRemoved({
+                    fromBlock: lastHeight + 1
+                }).on("error", function (error) {
+                    logger.info(error);
+                    logger.info("[GalleriaPanelRemoved] Sync Ending ...");
+                    isGetTokenInfoWithMemoJobRun = false
+                }).on("data", async function (event) {
+                    let user = event.returnValues._user;
+                    let panelId = event.returnValues._panelId;
+                    let blockNumber = event.blockNumber;
+                    let txHash = event.transactionHash;
+                    let txIndex = event.transactionIndex;
 
-                let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex}
+                    let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex}
 
-                logger.info(`[GalleriaPanelRemoved] Panel Detail: ${JSON.stringify(panelEvent)}`)
-                await galleriaDbService.addPanelEvent(panelEvent);
-            })
-        });
-
+                    logger.info(`[GalleriaPanelRemoved] Panel Detail: ${JSON.stringify(panelEvent)}`)
+                    await galleriaDbService.addPanelEvent(panelEvent);
+                })
+            });
+        }
 
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             let lastHeight = await stickerDBService.getLastStickerSyncHeight();
@@ -389,8 +391,10 @@ module.exports = {
                 orderFilledJobId.reschedule(new Date(now + 3 * 60 * 1000));
                 orderCanceledJobId.reschedule(new Date(now + 3 * 60 * 1000));
 
-                panelCreatedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
-                panelRemovedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
+                if(config.galleriaContract !== '' && config.galleriaContractDeploy !== 0) {
+                    panelCreatedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
+                    panelRemovedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
+                }
             }
 
             if(!isGetTokenInfoJobRun) {

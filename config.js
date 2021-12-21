@@ -18,7 +18,7 @@ module.exports = {
     galleriaContract: '',
     pasarContractDeploy: 7801378,
     stickerContractDeploy: 7744408,
-    galleriaContractDeploy: 9295355,
+    galleriaContractDeploy: 0,
 
     ipfsNodeUrl: 'https://ipfs.trinity-feeds.app/ipfs/',
 
