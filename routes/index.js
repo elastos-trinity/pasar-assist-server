@@ -30,5 +30,13 @@ router.get('/ip', function (req, res) {
     res.json({code: 200, message: 'success', data: {ip}});
 })
 
+router.get('/price', function (req, res) {
+    dbService.getLatestPrice().then(result => {res.json(result)});
+})
+
+router.post('/diaBalance', function (req, res) {
+    dbService.diaBalance(req.body).then(result => {res.json({code: 200, message: 'success', data: result})});
+})
+
 
 module.exports = router;

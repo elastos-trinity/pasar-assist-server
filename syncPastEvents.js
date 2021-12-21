@@ -3,8 +3,8 @@ let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
 let stickerDBService = require('./service/stickerDBService');
 let config = require('./config');
-let pasarContractABI = require('./pasarABI');
-let stickerContractABI = require('./stickerABI');
+let pasarContractABI = require('./contractABI/pasarABI');
+let stickerContractABI = require('./contractABI/stickerABI');
 const BigNumber = require("bignumber.js");
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -218,6 +218,8 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
         }).then(events => {
             events.forEach(async event => {
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
 
@@ -229,7 +231,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let value = event.returnValues._value;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value};
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
                 await stickerDBService.addEvent(transferEvent);
 
                 if(to === burnAddress) {
@@ -261,7 +263,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                                 token.did = await response.json();
 
                                 console.log(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                                await pasarDBService.replaceDid({address: result.royaltyOwner,didStr: token.did.did, did: token.did});
+                                await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                             }
                         }
 
@@ -325,9 +327,11 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let value = event.returnValues._value;
                 let memo = event.returnValues._memo ? event.returnValues._memo : "";
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo};
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })

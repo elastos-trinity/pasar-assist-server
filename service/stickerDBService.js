@@ -27,13 +27,35 @@ module.exports = {
             await client.connect();
             const collection = client.db(config.dbName).collection('pasar_token');
             let total = await collection.find().count();
-            let result = await collection.find().sort({tokenIndex: -1}).project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
+            let result = await collection.find().sort({createTime: -1})
+                .project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
             return {code: 200, message: 'success', data: {total, result}};
         } catch (err) {
             logger.error(err);
             return {code: 500, message: 'server error'};
         } finally {
             await client.close();
+        }
+    },
+
+    listTransactions: async function(pageNum, pageSize) {
+        let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await mongoClient.connect();
+            const collection = mongoClient.db(config.dbName).collection('pasar_token_event');
+
+            let match = {
+                from: {$ne: '0x0000000000000000000000000000000000000000'},
+                to: {$nin: ['0x0000000000000000000000000000000000000000', config.pasarContract]},
+            }
+            let total = await collection.find(match).count();
+            let result = await collection.find(match).sort({blockNumber: -1})
+                .project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
+            return {code: 200, message: 'success', data: {total, result}};
+        } catch (err) {
+            logger.error(err);
+        } finally {
+            await mongoClient.close();
         }
     },
 
@@ -144,31 +166,48 @@ module.exports = {
             await client.connect();
             let collection = client.db(config.dbName).collection('pasar_token_event');
 
-            let match = {};
-            if(types !== undefined) {
-                match['token.type'] = { "$in": types };
-            }
+            let match = {}, result;
             if(owner) {
                 match["to"] = owner;
             }
             if(creator) {
                 match["token.royaltyOwner"] = creator;
             }
-            let result = await collection.aggregate([
-                { $sort: {tokenId: 1, blockNumber: -1}},
-                { $group: {_id: "$tokenId", doc: {$first: "$$ROOT"}}},
-                { $replaceRoot: { newRoot: "$doc"}},
-                { $lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"} },
-                { $unwind: "$token"},
-                { $match: {...match}},
-                { $project: {"_id": 0, tokenId:1, blockNumber:1, timestamp:1, value: 1,memo: 1, to: 1, holder: "$to",
-                        tokenIndex: "$token.tokenIndex", quantity: "$token.quantity", royalties: "$token.royalties",
-                        royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
-                        name: "$token.name", description: "$token.description", kind: "$token.kind", type: "$token.type",
-                        thumbnail: "$token.thumbnail", asset: "$token.asset", size: "$token.size", tokenDid: "$token.did",
-                        adult: "$token.adult"}}
-            ]).toArray();
 
+            if(types !== undefined) {
+                match['token.type'] = { "$in": types };
+            }
+
+            if(types !== undefined && types[0] === 'feeds-chanel') {
+                result = await collection.aggregate([
+                    { $sort: {tokenId: 1, blockNumber: -1}},
+                    { $group: {_id: "$tokenId", doc: {$first: "$$ROOT"}}},
+                    { $replaceRoot: { newRoot: "$doc"}},
+                    { $lookup: {from: "pasar_token_galleria", localField: "tokenId", foreignField: "tokenId", as: "token"} },
+                    { $unwind: "$token"},
+                    { $match: {...match}},
+                    { $project: {"_id": 0, tokenId:1, blockNumber:1, timestamp:1, value: 1,memo: 1, to: 1, holder: "$to",
+                            tokenIndex: "$token.tokenIndex", quantity: "$token.quantity", royalties: "$token.royalties",
+                            royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
+                            name: "$token.name", description: "$token.description", type: "$token.type", tippingAddress: "$token.tippingAddress",
+                            entry: "$token.entry", avatar: "$token.avatar", tokenDid: "$token.did", version: '$token.tokenJsonVersion'}}
+                ]).toArray();
+            } else {
+                result = await collection.aggregate([
+                    { $sort: {tokenId: 1, blockNumber: -1}},
+                    { $group: {_id: "$tokenId", doc: {$first: "$$ROOT"}}},
+                    { $replaceRoot: { newRoot: "$doc"}},
+                    { $lookup: {from: "pasar_token", localField: "tokenId", foreignField: "tokenId", as: "token"} },
+                    { $unwind: "$token"},
+                    { $match: {...match}},
+                    { $project: {"_id": 0, tokenId:1, blockNumber:1, timestamp:1, value: 1,memo: 1, to: 1, holder: "$to",
+                            tokenIndex: "$token.tokenIndex", quantity: "$token.quantity", royalties: "$token.royalties",
+                            royaltyOwner: "$token.royaltyOwner", createTime: '$token.createTime', tokenIdHex: '$token.tokenIdHex',
+                            name: "$token.name", description: "$token.description", kind: "$token.kind", type: "$token.type",
+                            thumbnail: "$token.thumbnail", asset: "$token.asset", size: "$token.size", tokenDid: "$token.did",
+                            adult: "$token.adult"}}
+                ]).toArray();
+            }
             return {code: 200, message: 'success', data: {result}};
         } catch (err) {
             logger.error(err);

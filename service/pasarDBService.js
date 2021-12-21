@@ -55,12 +55,12 @@ module.exports = {
         }
     },
 
-    replaceDid: async function({address, didStr, did}) {
+    replaceDid: async function({address, did}) {
         let mongoClient = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
         try {
             await mongoClient.connect();
             const collection = mongoClient.db(config.dbName).collection('pasar_address_did');
-            await collection.updateOne({address, didStr}, {$set: {did}}, {upsert: true});
+            await collection.updateOne({address, "did.version": did.version, "did.did": did.did}, {$set: {did}}, {upsert: true});
         } catch (err) {
             logger.error(err);
             throw new Error();

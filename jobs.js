@@ -2,9 +2,12 @@ const schedule = require('node-schedule');
 let Web3 = require('web3');
 let pasarDBService = require('./service/pasarDBService');
 let stickerDBService = require('./service/stickerDBService');
+let indexDBService = require('./service/indexDBService');
+let galleriaDbService = require('./service/galleriaDBService');
 let config = require('./config');
-let pasarContractABI = require('./pasarABI');
-let stickerContractABI = require('./stickerABI');
+let pasarContractABI = require('./contractABI/pasarABI');
+let stickerContractABI = require('./contractABI/stickerABI');
+let galleriaContractABI = require('./contractABI/galleriaABI');
 let sendMail = require('./send_mail');
 const BigNumber = require("bignumber.js");
 
@@ -17,6 +20,18 @@ module.exports = {
         const burnAddress = '0x0000000000000000000000000000000000000000';
 
         let web3WsProvider = new Web3.providers.WebsocketProvider(config.escWsUrl, {
+            //timeout: 30000, // ms
+            // Useful for credentialed urls, e.g: ws://username:password@localhost:8546
+            //headers: {
+            //    authorization: 'Basic username:password'
+            //},
+            clientConfig: {
+                // Useful if requests are large
+                maxReceivedFrameSize: 100000000,   // bytes - default: 1MiB
+                maxReceivedMessageSize: 100000000, // bytes - default: 8MiB
+                keepalive: true, // Useful to keep a connection alive
+                keepaliveInterval: 60000 // ms
+            },
             reconnect: {
                 auto: true,
                 delay: 5000,
@@ -27,6 +42,7 @@ module.exports = {
         let web3Ws = new Web3(web3WsProvider);
         let pasarContractWs = new web3Ws.eth.Contract(pasarContractABI, config.pasarContract);
         let stickerContractWs = new web3Ws.eth.Contract(stickerContractABI, config.stickerContract);
+        let galleriaContractWs = new web3Ws.eth.Contract(galleriaContractABI, config.galleriaContract);
 
 
         let web3Rpc = new Web3(config.escRpcUrl);
@@ -61,13 +77,13 @@ module.exports = {
                         let response = await fetch(config.ipfsNodeUrl + tokenCID);
                         pasarOrder.sellerDid = await response.json();
 
-                        await pasarDBService.replaceDid({address: result.sellerAddr, didStr: pasarOrder.sellerDid.did, did: pasarOrder.sellerDid});
+                        await pasarDBService.replaceDid({address: result.sellerAddr, did: pasarOrder.sellerDid});
                     }
                 }
                 let res = await pasarDBService.updateOrInsert(pasarOrder);
                 if(res.modifiedCount !== 1 && res.upsertedCount !== 1) {
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
-                    console.log(`${eventType}]  update or insert order info error : ${JSON.stringify(pasarOrder)}`)
+                    console.log(`update or insert order info error : ${JSON.stringify(pasarOrder)}`)
                     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
                 }
             } catch(error) {
@@ -103,7 +119,7 @@ module.exports = {
                         token.did = await response.json();
 
                         logger.info(`[TokenInfo] New token info: ${JSON.stringify(token)}`)
-                        await pasarDBService.replaceDid({address: result.royaltyOwner,didStr: token.did.did, did: token.did});
+                        await pasarDBService.replaceDid({address: result.royaltyOwner, did: token.did});
                     }
                 }
 
@@ -237,6 +253,65 @@ module.exports = {
             })
         });
 
+        let panelCreatedSyncJobId, panelRemovedSyncJobId;
+        if(config.galleriaContract !== '' && config.galleriaContractDeploy !== 0) {
+            panelCreatedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+                let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelCreated');
+                logger.info(`[GalleriaPanelCreated] Sync Starting ... from block ${lastHeight + 1}`)
+
+                galleriaContractWs.events.PanelCreated({
+                    fromBlock: lastHeight + 1
+                }).on("error", function (error) {
+                    logger.info(error);
+                    logger.info("[GalleriaPanelCreated] Sync Ending ...");
+                    isGetTokenInfoWithMemoJobRun = false
+                }).on("data", async function (event) {
+                    let user = event.returnValues._user;
+                    let panelId = event.returnValues._panelId;
+                    let tokenId = event.returnValues._tokenId;
+                    let amount = event.returnValues._amount;
+                    let fee = event.returnValues._fee;
+                    let didUri = event.returnValues.didUri;
+                    let blockNumber = event.blockNumber;
+                    let txHash = event.transactionHash;
+                    let txIndex = event.transactionIndex;
+
+                    let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex, tokenId, amount, fee, didUri}
+
+                    let creatorCID = didUri.split(":")[2];
+                    let response = await fetch(config.ipfsNodeUrl + creatorCID);
+                    panelEvent.did = await response.json();
+
+                    logger.info(`[GalleriaPanelCreated] Panel Detail: ${JSON.stringify(panelEvent)}`)
+                    await galleriaDbService.addPanelEvent(panelEvent);
+                })
+            });
+
+            panelRemovedSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
+                let lastHeight = await galleriaDbService.getLastPanelEventSyncHeight('PanelRemoved');
+                logger.info(`[GalleriaPanelRemoved] Sync Starting ... from block ${lastHeight + 1}`)
+
+                galleriaContractWs.events.PanelRemoved({
+                    fromBlock: lastHeight + 1
+                }).on("error", function (error) {
+                    logger.info(error);
+                    logger.info("[GalleriaPanelRemoved] Sync Ending ...");
+                    isGetTokenInfoWithMemoJobRun = false
+                }).on("data", async function (event) {
+                    let user = event.returnValues._user;
+                    let panelId = event.returnValues._panelId;
+                    let blockNumber = event.blockNumber;
+                    let txHash = event.transactionHash;
+                    let txIndex = event.transactionIndex;
+
+                    let panelEvent = {panelId, user, event: event.event, blockNumber, txHash, txIndex}
+
+                    logger.info(`[GalleriaPanelRemoved] Panel Detail: ${JSON.stringify(panelEvent)}`)
+                    await galleriaDbService.addPanelEvent(panelEvent);
+                })
+            });
+        }
+
         let tokenInfoSyncJobId = schedule.scheduleJob(new Date(now + 60 * 1000), async () => {
             let lastHeight = await stickerDBService.getLastStickerSyncHeight();
             isGetTokenInfoJobRun = true;
@@ -250,6 +325,8 @@ module.exports = {
                 isGetTokenInfoJobRun = false
             }).on("data", async function (event) {
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let from = event.returnValues._from;
                 let to = event.returnValues._to;
 
@@ -262,7 +339,7 @@ module.exports = {
                 let value = event.returnValues._value;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value}
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
                 logger.info(`[TokenInfo] tokenEvent: ${JSON.stringify(transferEvent)}`)
                 await stickerDBService.replaceEvent(transferEvent);
 
@@ -294,9 +371,11 @@ module.exports = {
                 let value = event.returnValues._value;
                 let memo = event.returnValues._memo ? event.returnValues._memo : "";
                 let blockNumber = event.blockNumber;
+                let txHash = event.transactionHash;
+                let txIndex = event.transactionIndex;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp, from, to, value, memo}
+                let transferEvent = {tokenId, blockNumber, timestamp, txHash, txIndex, from, to, value, memo}
                 logger.info(`[TokenInfoWithMemo] transferToken: ${JSON.stringify(transferEvent)}`)
                 await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
@@ -311,6 +390,11 @@ module.exports = {
                 orderPriceChangedJobId.reschedule(new Date(now + 2 * 60 * 1000));
                 orderFilledJobId.reschedule(new Date(now + 3 * 60 * 1000));
                 orderCanceledJobId.reschedule(new Date(now + 3 * 60 * 1000));
+
+                if(config.galleriaContract !== '' && config.galleriaContractDeploy !== 0) {
+                    panelCreatedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
+                    panelRemovedSyncJobId.reschedule(new Date(now + 4 * 60 * 1000));
+                }
             }
 
             if(!isGetTokenInfoJobRun) {
@@ -402,5 +486,42 @@ module.exports = {
 
             stickerEventCheckBlockNumber = toBlock + 1;
         });
+
+        /**
+         *  Get ELA price from CoinMarketCap
+         */
+        let coins = {"BTC": 1, "BNB": 1839, "HT": 2502, "AVAX": 5805, "ETH": 1027, "FTM": 3513, "MATIC": 3890};
+        let coins2 = {"FSN": 2530, "ELA": 2492, "TLOS": 4660}
+        if(config.cmcApiKeys.length > 0) {
+            schedule.scheduleJob('*/4 * * * *', async () => {
+                let x = Math.floor(Math.random() * config.cmcApiKeys.length);
+                let headers = {'Content-Type': 'application/json', 'X-CMC_PRO_API_KEY': config.cmcApiKeys[x]}
+                let res = await fetch('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100', {method: 'get', headers})
+                let result = await res.json();
+
+                let record = {timestamp: Date.parse(result.status.timestamp)}
+                result.data.forEach(item => {
+                    if(coins[item.symbol] === item.id) {
+                        record[item.symbol] = item.quote.USD.price;
+                    }
+                })
+
+                for(let i in coins2) {
+                    let resOther = await fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=1&convert_id=${coins2[i]}`, {method: 'get', headers})
+                    let resultOther = await resOther.json();
+
+                    if(resultOther.data[0].id === 1) {
+                        let priceAtBTC = resultOther.data[0].quote[coins2[i]].price;
+                        record[i] = record['BTC'] / priceAtBTC;
+                    } else {
+                        logger.error(`[Get CMC PRICE] the base coin changed`);
+                    }
+                }
+
+                logger.info(`[Get CMC PRICE] Price: ${JSON.stringify(record)}`);
+                await indexDBService.insertCoinsPrice(record);
+                await indexDBService.removeOldPriceRecords(record.timestamp - 30 * 24 * 60 * 60 * 1000)
+            })
+        }
     }
 }

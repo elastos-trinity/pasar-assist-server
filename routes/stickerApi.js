@@ -31,6 +31,34 @@ router.get('/listStickers', function(req, res) {
     })
 });
 
+router.get('/listTransactions', function(req, res) {
+    let pageNumStr = req.query.pageNum;
+    let pageSizeStr = req.query.pageSize;
+
+    let pageNum, pageSize;
+
+    try {
+        pageNum = pageNumStr ? parseInt(pageNumStr) : 1;
+        pageSize = pageSizeStr ? parseInt(pageSizeStr) : 10;
+
+        if(pageNum < 1 || pageSize < 1) {
+            res.json({code: 400, message: 'bad request'})
+            return;
+        }
+    }catch (e) {
+        console.log(e);
+        res.json({code: 400, message: 'bad request'});
+        return;
+    }
+
+    stickerDBService.listTransactions(pageNum, pageSize).then(result => {
+        res.json(result);
+    }).catch(error => {
+        console.log(error);
+        res.json({code: 500, message: 'server error'});
+    })
+});
+
 router.get('/search', function(req, res) {
     let keyword = req.query.key;
 
@@ -56,7 +84,6 @@ router.get('/query', function(req, res) {
     let creator = req.query.creator;
     let typesStr = req.query.types;
 
-    let error = 0;
     let types = undefined;
     if(typesStr !== undefined) {
         if(typeof typesStr !== "object") {
@@ -64,18 +91,15 @@ router.get('/query', function(req, res) {
         } else {
             types = typesStr;
         }
-        const typesDef = ['image', 'avatar', 'feeds-channel'];
-        types.forEach(item => {
-            logger.info(item)
-            if(!typesDef.includes(item)) {
-                res.json({code: 400, message: 'bad request'});
-                error = 1;
-                return false;
+        if(types[0] === 'image' || types[0] === 'avatar') {
+            if(types[1] === 'feeds-channel' || types.length > 2) {
+                res.json({code: 400, message: 'bad request'})
             }
-        })
-    }
-    if(error === 1) {
-        return;
+        } else {
+            if(types[0] === 'feeds-channel' && types.length > 1) {
+                res.json({code: 400, message: 'bad request'})
+            }
+        }
     }
 
     if(!owner && !creator) {

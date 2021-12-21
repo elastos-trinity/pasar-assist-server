@@ -16,7 +16,7 @@ async function removeDuplicateDBItem() {
         tokenEventDuplicate.forEach(item => {
             console.log(`remove ${JSON.stringify(item._id)} ==> ${item.count - 1} times`);
             for(let i = 0; i < item.count - 1; i++) {
-                promises.push(collection1.deleteOne(item._id));
+                promises.push(collection1.deleteOne(item._id).then(result => result.deletedCount));
             }
         })
 
@@ -30,11 +30,11 @@ async function removeDuplicateDBItem() {
         orderEventDuplicate.forEach(item => {
             console.log(`remove ${JSON.stringify(item._id)} ==> ${item.count - 1} times`);
             for(let i = 0; i < item.count - 1; i++) {
-                promises.push(collection2.deleteOne(item._id));
+                promises.push(collection2.deleteOne(item._id).then(result => result.deletedCount));
             }
         })
 
-        return Promise.all(promises);
+        return await Promise.all(promises);
     } catch (err) {
         console.log(err);
     } finally {
