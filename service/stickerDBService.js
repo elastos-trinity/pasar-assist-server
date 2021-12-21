@@ -254,5 +254,61 @@ module.exports = {
         } finally {
             await mongoClient.close();
         }
+    },
+
+    listTrans: async function(pageNum, pageSize) {
+        let client = new MongoClient(config.mongodb, {useNewUrlParser: true, useUnifiedTopology: true});
+        try {
+            await client.connect();
+            const collection = client.db(config.dbName).collection('pasar_token_event');
+            let results = await collection.aggregate([
+                {
+                    $lookup:
+                    {
+                        from : 'pasar_token',
+                        localField: 'tokenId',
+                        foreignField: 'tokenId',
+                        as: 'pasar_token_info'
+                    }
+                },
+                {
+                    $match:{
+                        "pasar_token_info": {$size : 1}
+                    }
+                },
+                {
+                    $sort: {blockNumber: -1}
+                },
+                {
+                    $limit: 5,
+                },
+                {
+                    $project: {"_id": 0},
+                },
+                {
+                    $skip: (pageNum - 1) * pageSize 
+                }
+            ]).toArray();
+            let result = [];
+            for(var i = 0; i < results.length; i++) {
+                let token_info = results[i]['pasar_token_info'][0];
+                if(token_info == undefined)
+                    continue;
+                delete results[i]['pasar_token_info'];
+                results[i]['method'] = 'TRANSFER';
+                if(results[i]['from'] == 0x0000000000000000000000000000000000000000)
+                    results[i]['method'] = 'CREATE';
+                if(results[i]['to'] == 0x0000000000000000000000000000000000000000)
+                    results[i]['method'] = 'DELETE';
+                result.push({...results[i] ,...token_info});                
+            }
+            let total = await collection.find().count();
+            return {code: 200, message: 'success', data: {total, result}};
+        } catch (err) {
+            logger.error(err);
+            return {code: 500, message: 'server error'};
+        } finally {
+            await client.close();
+        }
     }
 }
