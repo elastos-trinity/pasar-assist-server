@@ -331,7 +331,7 @@ web3Rpc.eth.getBlockNumber().then(currentHeight => {
                 let txIndex = event.transactionIndex;
                 let timestamp = (await web3Rpc.eth.getBlock(blockNumber)).timestamp;
 
-                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value}
+                let transferEvent = {tokenId, blockNumber, timestamp,txHash, txIndex, from, to, value, memo}
                 await stickerDBService.addEvent(transferEvent);
                 await stickerDBService.updateToken(tokenId, to, timestamp);
             })
