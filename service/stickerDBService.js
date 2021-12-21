@@ -48,7 +48,7 @@ module.exports = {
                 from: {$ne: '0x0000000000000000000000000000000000000000'},
                 to: {$nin: ['0x0000000000000000000000000000000000000000', config.pasarContract]},
             }
-            let total = collection.find(match).count()
+            let total = await collection.find(match).count();
             let result = await collection.find(match).sort({blockNumber: -1})
                 .project({"_id": 0}).limit(pageSize).skip((pageNum-1)*pageSize).toArray();
             return {code: 200, message: 'success', data: {total, result}};
